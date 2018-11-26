@@ -7,6 +7,8 @@ from tensorflow.examples.tutorials.mnist import input_data
 import yaml
 import os
 
+import src.net.model as net
+import src.util.util as util
 # a train flow that will rely on cfgs for setting it up
 def train(cfgs=None, save_dir=None):
     print('Train')
@@ -42,67 +44,22 @@ def train(cfgs=None, save_dir=None):
         # Select our network
         # - this will also tack on an infrence as well
         with tf.variable_scope('network'):
-            if(model_type == 'sketch_1'):
-                print('sketch_1')
-
-            if(model_type == 'sketch_2'):
-                print('sketch_2')
-                    
-            if(model_type == 'sketch_3'):
-                print('sketch_3')
-                    
-            if(model_type == 'sketch_4'):
-                print('sketch_4')
-                    
-            if(model_type == 'sketch_5'):
-                print('sketch_5')
-
-            if(model_type == 'sketch_6'):
-                print('sketch_6')
-                
-            if(model_type == 'base'):
-                print('base')
-        
+            model = net.Model(cfgs, name='Model')
+            model.define_model()
         # set up the input tensors
         with tf.variable_scope('input'):
             # other images
-            image_size = [cfgs['data']['image_w'],cfgs['data']['image_h']]
-
+            # setup the datasets
             #mnist
-            mnist = None
+            mnist = None # mnist is set to none as a placeholder
             if(type_ == 'MNIST'):
-                iterations = 60000 // cfgs['data']['batch_size']
+                iterations = 60000 // cfgs['data']['batch_size'] # get iterations based on dataset size
                 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
-                x_ = tf.placeholder(tf.float32, [None, 784], name='image')
-                labels = tf.placeholder(tf.float32, [None, 10], name='label')
             else:
-                iterations = 50000 // cfgs['data']['batch_size']
-                x_ = tf.placeholder(tf.float32,[None, image_size[1], image_size[0], cfgs['data']['num_channels']],name='image') #
-                labels = tf.placeholder(tf.float32, [None, cfgs['data']['num_classes']] ,name='label')
-		
+                iterations = 50000 // cfgs['data']['batch_size'] # this infers that the set is cifar-10
+
         epoch_size = iterations
 
-        # loss section
-        with tf.variable_scope('loss'):
-            loss = tf.nn.softmax_cross_entropy_with_logits(labels=tf.to_int64(labels), logits=[probs])
-            arg_logit = tf.argmax(probs, -1)
-            arg_label = tf.argmax(tf.to_int64(labels),-1)
-            correct = tf.equal(arg_logit, arg_label)
-            accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
-            _op, rmse = tf.metrics.mean_squared_error(arg_label, arg_logit)
-
-            reduce_loss = tf.reduce_mean(loss)
-            tf.summary.scalar('total_loss', reduce_loss)
-            tf.summary.scalar('accuracy', accuracy)
-
-        # optimizer
-        with tf.variable_scope('train'):
-            # first get our optimizer
-            learning_rate = tf.placeholder('float', [])
-            opt = util.getOptimizer(cfgs, learning_rate)
-            train_op = opt.minimize(reduce_loss)
-    
-        merged_summary = tf.summary.merge_all() # tensor board summary
     if(cfgs['debug'] or cfgs['model_debug']): input('->')
     save_interval = cfgs['train']['save_interval'] # set out save interval
     #if(save_interval == -1): 
@@ -111,17 +68,15 @@ def train(cfgs=None, save_dir=None):
     sess = util.get_session(cfgs['gpu_limit'])
 
     # setup our image paths if we are not using MNIST
-    if not(cfgs['data']['type'] == 'MNIST'):
+    if not(cfgs['data']['type'] == 'MNIST'): # get paths and make ids array that correlates with it
         image_paths = glob(cfgs['data']['data_start']+'train/*.png')
         train_ids = list(range(0,len(image_paths)))
-        np.random.shuffle(train_ids)
+        np.random.shuffle(train_ids) # shuffle the ids. Randomizes them
 
     cprint('training....', 'green', attrs=['bold'])
     cprint('Save:      {}'.format(save_dir), 'cyan', attrs=['bold'])
     cprint('Dataset:   {}'.format(type_), 'green', attrs=['underline', 'bold'])
     print('Model:      {}'.format(colored('{}'.format(model_type), 'yellow') ))
-    print('arch:       {}'.format(colored('{}'.format(arch), 'yellow')))
-    print('convs:      {}'.format(colored('{}'.format(conv_layers), 'yellow')))
     print('wavelet:    {}'.format(colored('{}'.format(cfgs['model']['wavelet']), 'yellow')))
     print('pooling:    {}'.format(colored('{}'.format(pooling), 'yellow')))
     print('epochs:     {}'.format(colored('{}'.format(epochs), 'yellow')))
@@ -129,49 +84,55 @@ def train(cfgs=None, save_dir=None):
     print('batch size: {}\n'.format(colored('{}'.format(batch_size), 'yellow')))
 
     with sess:
+        # get starting time
         start_time = time.time()
-
+        # initialize variables
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
-
+        # starting up...
         print('training...')
-        class_names = cfgs['data']['classes']
+        # base learning rate, it could change if you wanted to add that feature
         base_lr = cfgs['train']['learning_rate']
+        # open our output text file. We want to log everything for making plots later
         with open(save_dir + 'train_out.txt', 'w+') as out_file:
-            for e in range(epochs):
-                    validation_text = ''
+            for e in range(epochs): # iterate
                     for idx in range(iterations):
+                        '''
+                        load image
+                        feed to network, update network[training only]
+                        print result
+                        log result to out_file
+                        '''
                         if(type_ == 'MNIST'):
                             images_in, batch_labels = mnist.train.next_batch(cfgs['data']['batch_size'])
                         else:
                             images_in, batch_labels = util.get_batch(cfgs, image_paths, train_ids, batch_size=batch_size, w=cfgs['data']['image_w'], h=cfgs['data']['image_h'])
 
-                        _, _loss, _acc, _rmse, summ = sess.run([train_op, reduce_loss, accuracy, rmse, merged_summary], feed_dict={x_: images_in, labels: batch_labels, learning_rate: base_lr})
+                        _, _loss, _acc, _rmse = sess.run([model.train_op, model.reduce_loss, model.accuracy, model.rmse], feed_dict={model.inputs: images_in, model.labels: batch_labels, model.learning_rate: base_lr})
                         train_results['epoch_{}'.format(e)]['acc'].append(_acc)
                         train_results['epoch_{}'.format(e)]['rmse'].append(_rmse)
-                        text = '\rEpoch [{}/{}] | [{}/{}] TRAINING loss : {:.4f} TRAINING accuracy : {:.4f}'.format(e,cfgs['train']['num_epochs']-1, idx, epoch_size, _loss, _acc)
-                        print(text, end='')
-
+                        text = '[T] Epoch [{}/{}] | [{}/{}] TRAINING loss : {:.4f} TRAINING accuracy : {:.4f}'.format(e,cfgs['train']['num_epochs']-1, idx, epoch_size, _loss, _acc)
+                        print('\r' + text, end='')
+                        out_file.write(text + '\n')
                         if(idx % save_interval == 0):
                             if(type_ == 'MNIST'):
                                 images_in, batch_labels = mnist.train.next_batch(cfgs['data']['batch_size'])
                             else:
                                 images_in, batch_labels = util.get_batch(cfgs, image_paths, train_ids, batch_size=batch_size, w=cfgs['data']['image_w'], h=cfgs['data']['image_h'])
 
-                            _loss, _acc, _rmse, summ = sess.run([reduce_loss, accuracy, rmse, merged_summary], feed_dict={x_: images_in, labels: batch_labels})
+                            _loss, _acc, _rmse = sess.run([model.reduce_loss, model.accuracy, model.rmse], feed_dict={model.inputs: images_in, model.labels: batch_labels})
                             
-                            line = 'Epoch [{}/{}] | [{}/{}] VAL loss : {:.4f} VAL accuracy : {:.4f} VAL RMSE : {:.3f}'.format(e,cfgs['train']['num_epochs']-1, idx, epoch_size, _loss, _acc, _rmse)
+                            line = '[V] Epoch [{}/{}] | [{}/{}] VAL loss : {:.4f} VAL accuracy : {:.4f} VAL RMSE : {:.3f}'.format(e,cfgs['train']['num_epochs']-1, idx, epoch_size, _loss, _acc, _rmse)
                             cprint('\r ' + line, 'yellow', attrs=['bold'])
                             out_file.write('{}\n'.format(line))
                             val_accs.append(_acc)
                             val_rmses.append(_rmse)
-        
-        saver = tf.train.Saver()
-        saver.save(sess, save_dir + 'epoch_{}_model.ckpt'.format(e),global_step=epoch_size) # save our model state
-        elapsed_time = time.time() - start_time
-        time_out = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
-    
-    out_file.close()
+            out_file.close() # CLOSE FILE
+    # save network after completion
+    saver = tf.train.Saver()
+    saver.save(sess, save_dir + 'epoch_{}_model.ckpt'.format(e),global_step=epoch_size) # save our model state
+    elapsed_time = time.time() - start_time
+    time_out = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
     sess.close()
     # get averages of training results, [not validation]
     train_acc = []

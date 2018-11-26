@@ -73,24 +73,42 @@ def dwt(x, wave_type, name='dwt'):
 
 # Start of tensorflow helpers # # # # 
 
+# general helpers
+def get_dim(x):
+    shape = x.get_shape().as_list()
+    dim = 1
+    for d in shape[1:]:
+        dim *= d
+    return dim
+
+def lrelu(x):
+    with tf.variable_scope('lrelu') as scope:
+        if x.dtype is not tf.complex64:
+            return tf.nn.leaky_relu(x)
+        else:
+            return x
+
+def relu(x):
+    with tf.variable_scope('relu') as scope:
+        if x.dtype is not tf.complex64:
+            return tf.nn.relu(x)
+        else:
+            return x
+
+def delist(net):
+    if type(net) is list: # if the value is a list delist it
+        net = tf.concat(net,-1,name = 'cat')
+    return net
+
+def conv2d(net, filters, kernel = 3, stride = 1, dilation_rate = 1, activation = relu, 
+            padding = 'SAME', trainable = True, name = None, reuse = None):
+    # define the output
+    net = tf.layers.conv2d(delist(net),filters,kernel,stride,padding,dilation_rate = dilation_rate, 
+            activation = activation,trainable = trainable, name = name, reuse = reuse)
+    return net
+
 # RESNET HELPERS
 # also from tensorflow ResNet
-def block_layer(inputs, filters, num_blocks, strides, training, name, bottleneck=False,
-                 block_function=res_block_v1, data_format='channels_last'):
-    with tf.variable_scope(name):
-        # This guy will create one layer of blocks
-        # if there is a bottle neck the out features is 4x the input
-        filters_out = filters * 4 if bottleneck else filters
-
-        # projection and striding is only applied to the first layer
-        inputs = block_function(inputs, filters, filters_out, training, projection_shortcut, strides, 'block_0', data_format)
-        
-        # Now add blocks using our block_function
-        for _ in range(1, num_blocks):
-            inputs = block_function(inputs, filters, filters_out, training, None, 1, 'block_{}'.format(_), data_format)
-
-        return tf.identity(inputs, name)
-
 # - the building block residual_block is a version 1 block that is simplified.
 def res_block_v1(inputs, filters, filters_out, training, projection_shortcut, 
                     strides, name, data_format='channels_last', bn=True):
@@ -147,10 +165,39 @@ def conv2d_fixed_padding(inputs, filters, kernel_size, strides, name='conv_2d_fi
             strides=strides, padding=padding, use_bias=False,
             kernel_initializer=tf.variance_scaling_initializer(),data_format=data_format)
 
-def projection_shortcut(inputs):
+def projection_shortcut(inputs, filters_out, strides ,data_format='channels_last'):
     return conv2d_fixed_padding(
         inputs=inputs, filters=filters_out, kernel_size=1, strides=strides,
         data_format=data_format)
 
-# END OF RESNET HELPERS
+def block_layer(inputs, filters, num_blocks, strides, training, name, bottleneck=False,
+                 block_function=res_block_v1, data_format='channels_last'):
+    with tf.variable_scope(name):
+        # This guy will create one layer of blocks
+        # if there is a bottle neck the out features is 4x the input
+        filters_out = filters * 4 if bottleneck else filters
 
+        # projection and striding is only applied to the first layer
+        inputs = block_function(inputs, filters, filters_out, training, projection_shortcut, strides, 'block_0', data_format)
+        
+        # Now add blocks using our block_function
+        for _ in range(1, num_blocks):
+            inputs = block_function(inputs, filters, filters_out, training, None, 1, 'block_{}'.format(_), data_format)
+
+        return tf.identity(inputs, name)
+
+# an inference function to get logits and predictions.
+# - uses a tf.dense layer as a fully connected layer
+def inference(inputs, classes):
+    # flatten the input, get our classes
+    num_classes = len(classes)
+    dim = get_dim(inputs)
+
+    inputs = tf.reshape(inputs, [-1, dim])
+    # feed through a tf.dense_layer
+    inputs = tf.layers.dense(inputs=inputs, units=num_classes)
+    logits = tf.identity(inputs, 'logits')
+    probs = tf.nn.softmax(logits, name='probs')
+    return logits, probs
+
+# END OF RESNET HELPERS
