@@ -13,13 +13,13 @@ class Model:
         self.cfgs = cfgs
         self.name = name
         self.num_classes = cfgs['data']['num_classes']
-        self.image_size = [cfgs['data']['image_h'], cfgs['data']['image_w']]
+        self.image_size = [cfgs['data']['image_w'], cfgs['data']['image_h']]
         # image size now
         if(cfgs['data']['type'] == 'MNIST'):
             self.inputs = tf.placeholder(tf.float32, [None,784], name='inputs')
             self.labels = tf.placeholder(tf.float32, [None,10], name='labels')
         else:
-            self.inputs = tf.placeholder(tf.float32,[None, self.image_size[0], self.image_size[1], cfgs['data']['num_channels']],name='inputs')
+            self.inputs = tf.placeholder(tf.float32,[None, self.image_size[1], self.image_size[0], cfgs['data']['num_channels']],name='inputs')
             self.labels = tf.placeholder(tf.float32, [None, cfgs['data']['num_classes']] ,name='labels')
         # set model function based on model type in cfgs, if model_function param in define model is given a function this will
         #  not be used.
@@ -30,7 +30,9 @@ class Model:
     # - also I want everything to be the same, so the only thing that will change is the model output
     def define_model(self, model_function=None):
         with tf.variable_scope('model'):
-            self.output = self.model_function if model_function is None else model_function
+            self.model_def = self.model_function if model_function is None else model_function
+            self.output = self.model_def(self.cfgs, self.inputs, self.image_size)
+            print(self.output)
             _, self.probs = mh.inference(self.output, self.num_classes)
 
         with tf.variable_scope('loss'):

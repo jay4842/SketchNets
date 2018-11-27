@@ -190,7 +190,7 @@ def block_layer(inputs, filters, num_blocks, strides, training, name, bottleneck
 # - uses a tf.dense layer as a fully connected layer
 def inference(inputs, classes):
     # flatten the input, get our classes
-    num_classes = len(classes)
+    num_classes = classes
     dim = get_dim(inputs)
 
     inputs = tf.reshape(inputs, [-1, dim])

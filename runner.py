@@ -53,8 +53,6 @@ def run_all(cfgs, py = 'python3'):
 
 # end of that guy
 def run_baseline(cfgs, py = 'python'):
-    mnist_iterations = 60000 // cfgs['data']['batch_size']
-    cifar_iterations = 50000 // cfgs['data']['batch_size']
     pools = ['avg', 'max', 'wave']
     waves = ['haar', 'db2', 'db3', 'db4']
     nets = ['base']

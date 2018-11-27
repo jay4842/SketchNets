@@ -23,9 +23,6 @@ def ResNet_20(cfgs, inputs, image_size, train=True):
         # the initial [3 x 3 x 16] convolution
         inputs = mh.conv2d_fixed_padding(inputs=inputs, filters=16, kernel_size=3, strides=1)
         print(inputs.get_shape().as_list())
-        # here a pool would be used
-
-        print(inputs.get_shape().as_list())
         # now the three blocks
         block_2 = mh.block_layer(inputs, filters=16, num_blocks=3, strides=1, training=train, name='conv2_x')
         print(block_2.get_shape().as_list())
