@@ -4,7 +4,7 @@ Currently working on converting code into a class based paradigm.
 ## Dependencies
 - Tensorflow (gpu recommended)
 - Numpy
-- Opencv3
+- Opencv
 - requests
 - termcolor
 - yaml

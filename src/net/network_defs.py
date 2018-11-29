@@ -89,14 +89,14 @@ def ResNet_18(cfgs, inputs, image_size, train=True):
 '''
 From: https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/slim/python/slim/nets/alexnet.py
 
-      net = layers.conv2d(inputs, 64, [11, 11], 4, padding='VALID', scope='conv1') 64 ->  32
-      net = layers_lib.max_pool2d(net, [3, 3], 2, scope='pool1')                   32 -> 16
+      net = layers.conv2d(inputs, 64, [11, 11], 1, padding='VALID', scope='conv1') 64 ->  64
+      net = layers_lib.max_pool2d(net, [3, 3], 2, scope='pool1')                   64 -> 32
       net = layers.conv2d(net, 192, [5, 5], scope='conv2')
-      net = layers_lib.max_pool2d(net, [3, 3], 2, scope='pool2')                   16 -> 8
+      net = layers_lib.max_pool2d(net, [3, 3], 2, scope='pool2')                   32 -> 16
       net = layers.conv2d(net, 384, [3, 3], scope='conv3') 
       net = layers.conv2d(net, 384, [3, 3], scope='conv4')
       net = layers.conv2d(net, 256, [3, 3], scope='conv5')
-      net = layers_lib.max_pool2d(net, [3, 3], 2, scope='pool5')                   8 -> 4
+      net = layers_lib.max_pool2d(net, [3, 3], 2, scope='pool5')                   16 -> 8
 ''' 
 # Modified the initial convolution, the stride of 4 is too much, changed to 2
 # - also might cut features in half, not sure yet
@@ -111,15 +111,15 @@ def AlexNet(cfgs, inputs, image_size):
             inputs = tf.image.grayscale_to_rgb(inputs)
             inputs = tf.image.resize_nearest_neighbor(inputs, (image_size[1], image_size[0]))
         #
-        in_shape = inputs.get_shape().as_list()
+        #in_shape = inputs.get_shape().as_list()
         # rest of the net here
-        conv_1 = mh.conv2d(x, 64, kernel=11, stride=2, padding='VALID', name='conv_1')
+        conv_1 = mh.conv2d(inputs, 16, kernel=11, stride=1, padding='VALID', name='conv_1')
         pool_1 = mh.pool(conv_1, pooling, wave_type)
-        conv_2 = mh.conv2d(pool_1, 192, kernel=3, name='conv_2')
+        conv_2 = mh.conv2d(pool_1, 32, kernel=3, name='conv_2')
         pool_2 = mh.pool(conv_2, pooling, wave_type)
-        conv_3 = mh.conv2d(pool_2, 384, kernel=3, name='conv_3')
-        conv_4 = mh.conv2d(conv_3, 384, kernel=3, name='conv_4')
-        conv_5 = mh.conv2d(conv_4, 256, kernel=3, name='conv_5')
+        conv_3 = mh.conv2d(pool_2, 64, kernel=3, name='conv_3')
+        conv_4 = mh.conv2d(conv_3, 64, kernel=3, name='conv_4')
+        conv_5 = mh.conv2d(conv_4, 128, kernel=3, name='conv_5')
         pool_3 = mh.pool(conv_5, pooling, wave_type)
 
         return pool_3
