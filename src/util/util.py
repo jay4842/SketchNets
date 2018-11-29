@@ -43,6 +43,7 @@ def get_session(gpu_fraction=0.4):
 # for loading a single test image
 def get_test_image(cfgs, image_path, w=128, h=256, standardize=True, channel_swap=None):
     if(cfgs['data']['root_paths']):
+        image_path = image_path.replace('\\', '/')
         image = cv2.imread(image_path)
         label = image_path.split('/')[-1].split(cfgs['data']['label_seperator'])[0]
     else:
@@ -68,6 +69,7 @@ def get_images(cfgs, batch_paths, ids, w=128, h=256, augment=True, standardize=T
     labels = []
     for idx, b in enumerate(ids):
         path_ = batch_paths[b]
+        path_ = path_.replace('\\','/')
         if(cfgs['data']['root_paths']):
             image = cv2.imread(path_)
             label = path_.split('/')[-1].split(cfgs['data']['label_seperator'])[0]

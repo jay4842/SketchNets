@@ -42,6 +42,47 @@ def ResNet_20(cfgs, inputs, image_size, train=True):
             print(pool_out.get_shape().as_list())
             return pool_out
 
+def ResNet_18(cfgs, inputs, image_size, train=True):
+    print('RESNET_18')
+    wave_type = cfgs['model']['wavelet']
+    data_type = cfgs['data']['type']
+    pooling = cfgs['model']['pooling']
+
+    with tf.variable_scope('ResNet'):
+        if(data_type == 'MNIST'):
+            # we need to reshape our inputs
+            inputs = tf.reshape(inputs, [-1,28,28,1])
+            inputs = tf.image.grayscale_to_rgb(inputs)
+            inputs = tf.image.resize_nearest_neighbor(inputs, (image_size[1], image_size[0]))
+        #
+        in_shape = inputs.get_shape().as_list()
+        print(in_shape)
+        # 
+        # the initial [3 x 3 x 16] convolution
+        conv_1 = mh.conv2d_fixed_padding(inputs=inputs, filters=16, kernel_size=7, strides=2)
+        print(conv_1.get_shape().as_list())
+        # now the four blocks
+        block_1 = mh.block_layer(conv_1, filters=32, num_blocks=2, strides=1, training=train, name='conv1_x')
+        print(block_1.get_shape().as_list())
+
+        block_2 = mh.block_layer(block_1, filters=64, num_blocks=2, strides=2, training=train, name='conv2_x')
+        print(block_2.get_shape().as_list())
+
+        block_3 = mh.block_layer(block_2, filters=128, num_blocks=2, strides=2, training=train, name='conv3_x')
+        print(block_3.get_shape().as_list())
+
+        block_4 = mh.block_layer(block_3, filters=128, num_blocks=2, strides=1, training=train, name='conv4_x')
+        print(block_4.get_shape().as_list())
+        # apply another pool here
+
+        with tf.variable_scope('pool_out'):
+            shape = block_4.get_shape().as_list()
+            #axes = [1, 2]
+            #pool_out = tf.reduce_mean(block_4, axes)
+            pool_out = mh.pool(block_4, pool=pooling, wavelet=wave_type) # for now this is the one we will mess with
+            print(pool_out.get_shape().as_list())
+            return pool_out
+
 # This will be our shallow net
 # - Using more standard networks is more well standard
 # - another note: this is alexNet_v2

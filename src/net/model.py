@@ -36,7 +36,7 @@ class Model:
             _, self.probs = mh.inference(self.output, self.num_classes)
 
         with tf.variable_scope('loss'):
-            loss = tf.nn.softmax_cross_entropy_with_logits(labels=tf.to_int64(self.labels), logits=[self.probs])
+            loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=tf.to_int64(self.labels), logits=[self.probs])
             arg_logit = tf.argmax(self.probs, -1)
             arg_label = tf.argmax(tf.to_int64(self.labels),-1)
             correct = tf.equal(arg_logit, arg_label)

@@ -8,9 +8,22 @@ import yaml
 import os
 
 import src.net.model as net
+import src.net.network_defs as defs
 import src.util.util as util
+
+def tick_bar(pos):
+    ticks = ['|', '/', '-', '\\']
+    print('\r{}'.format(ticks[pos]), end='')
+
+    pos += 1
+    if(pos >= len(ticks)):
+        pos = 0
+    
+    return pos
+
 # a train flow that will rely on cfgs for setting it up
 def train(cfgs=None, save_dir=None):
+    os.system('clear')
     print('Train')
     with tf.device('/device:GPU:0'):
         tf.reset_default_graph()
@@ -45,7 +58,7 @@ def train(cfgs=None, save_dir=None):
         # - this will also tack on an infrence as well
         with tf.variable_scope('network'):
             model = net.Model(cfgs, name='Model')
-            model.define_model()
+            model.define_model(model_function=defs.ResNet_20)
         # set up the input tensors
         with tf.variable_scope('input'):
             # other images
@@ -63,7 +76,7 @@ def train(cfgs=None, save_dir=None):
     if(cfgs['debug'] or cfgs['model_debug']): input('->')
     save_interval = cfgs['train']['save_interval'] # set out save interval
     #if(save_interval == -1): 
-    #    save_interval =  int(epoch_size/5)# this is a placeholder...
+    #    save_interval =  int(epoch_size/4)# this is a placeholder...
     save_interval = iterations
     sess = util.get_session(cfgs['gpu_limit'])
 
@@ -72,6 +85,11 @@ def train(cfgs=None, save_dir=None):
         image_paths = glob(cfgs['data']['data_start']+'train/*.png')
         train_ids = list(range(0,len(image_paths)))
         np.random.shuffle(train_ids) # shuffle the ids. Randomizes them
+        test_dir = cfgs['data']['data_start'] + 'test/'
+        test_images = glob(test_dir + '*.png')
+    else:
+        test_images = mnist.test.images
+        test_labels = mnist.test.labels
 
     cprint('training....', 'green', attrs=['bold'])
     cprint('Save:      {}'.format(save_dir), 'cyan', attrs=['bold'])
@@ -115,18 +133,34 @@ def train(cfgs=None, save_dir=None):
                         print('\r' + text, end='')
                         out_file.write(text + '\n')
                         if(idx % save_interval == 0):
-                            if(type_ == 'MNIST'):
-                                images_in, batch_labels = mnist.train.next_batch(cfgs['data']['batch_size'])
-                            else:
-                                images_in, batch_labels = util.get_batch(cfgs, image_paths, train_ids, batch_size=batch_size, w=cfgs['data']['image_w'], h=cfgs['data']['image_h'])
+                            # run testing
+                            # instead of validation use testing
+                            test_loss = []
+                            test_acc = []
+                            test_rmse = []
+                            pos = 0
+                            for test_idx in range(len(test_images)):
+                                if(type_ == 'MNIST'):
+                                    t_label = test_labels[test_idx]
+                                    t_image = test_images[test_idx]
+                                else:
+                                    t_image, t_label = util.get_test_image(cfgs, test_images[test_idx], w=cfgs['data']['image_w'], h=cfgs['data']['image_h'])
 
-                            _loss, _acc, _rmse = sess.run([model.reduce_loss, model.accuracy, model.rmse], feed_dict={model.inputs: images_in, model.labels: batch_labels})
-                            
-                            line = '[V] Epoch [{}/{}] | [{}/{}] VAL loss : {:.4f} VAL accuracy : {:.4f} VAL RMSE : {:.3f}'.format(e,cfgs['train']['num_epochs']-1, idx, epoch_size, _loss, _acc, _rmse)
+                                _loss, _acc, _rmse = sess.run([model.reduce_loss, model.accuracy, model.rmse], feed_dict={model.inputs: [t_image], model.labels: [t_label]})
+                                test_loss.append(_loss)
+                                test_acc.append(_acc)
+                                test_rmse.append(_rmse)
+                                pos = tick_bar(pos)
+
+                            avg_test_loss = sum(test_loss) / len(test_loss)
+                            avg_test_acc = sum(test_acc) / len(test_acc)
+                            avg_test_rmse = sum(test_rmse) / len(test_rmse)
+
+                            line = '[V] Epoch [{}/{}] | [{}/{}] Test loss : {:.4f} Test accuracy : {:.4f} VAL RMSE : {:.3f}'.format(e,cfgs['train']['num_epochs']-1, idx, epoch_size, avg_test_loss, avg_test_acc, avg_test_rmse)
                             cprint('\r ' + line, 'yellow', attrs=['bold'])
                             out_file.write('{}\n'.format(line))
-                            val_accs.append(_acc)
-                            val_rmses.append(_rmse)
+                            val_accs.append(_avg_test_acc)
+                            val_rmses.append(avg_test_rmse)
             out_file.close() # CLOSE FILE
     # save network after completion
     saver = tf.train.Saver()

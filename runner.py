@@ -72,16 +72,22 @@ def run_baseline(cfgs, py = 'python'):
                     --conv_layers=2 --wavelet={} --pooling={} --dataset=MNIST \
                     --epochs=15 --batch_size=100'.format(py, net,w, pool)
                     os.system(cmd)
-                time.sleep(2)
+                time.sleep(2)#'''
     # runner for CIFAR
     for pool in pools:
         # run every wavelet
         for w in waves:
             # run every net
             for net in nets:
-                cmd = '{} runner.py --model_type={} --arch=4 \
-		        --conv_layers=3 --wavelet={} --pooling={} --dataset=cifar-10 \
-		        --epochs=30 --batch_size=100 --image_w=64 --image_h=64'.format(py, net,w, pool)
+                if((pool == 'avg' or pool == 'max') and (w == 'haar')):
+                    cmd = '{} runner.py --model_type={}\
+                    --wavelet={} --pooling={} --dataset=cifar-10 \
+                    --epochs=30 --batch_size=100'.format(py, net,w, pool)
+                    os.system(cmd)
+                elif pool == 'wave':
+                    cmd = '{} runner.py --model_type={} \
+                    --wavelet={} --pooling={} --dataset=cifar-10 \
+                    --epochs=30 --batch_size=100'.format(py, net,w, pool)
                 os.system(cmd)
                 time.sleep(2)
 
