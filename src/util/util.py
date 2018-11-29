@@ -4,10 +4,6 @@ import cv2
 import time
 import os
 import sys
-# email
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 # some image loader helpers
 def getOptimizer(cfgs, learning_rate):

@@ -110,12 +110,12 @@ def conv2d(net, filters, kernel = 3, stride = 1, dilation_rate = 1, activation =
 # RESNET HELPERS
 # From resNet tensorflow
 # - they use tf.layers batch norm instead of tf.nn. 
-def batch_norm(inputs, training, data_format='channels_last'):
+def batch_norm(inputs, training, data_format='channels_last', name='batch_norm'):
     """Performs a batch normalization using a standard set of parameters."""
     # We set fused=True for a significant performance boost. See
     # https://www.tensorflow.org/performance/performance_guide#common_fused_ops
     return tf.layers.batch_normalization( inputs=inputs, axis=3, momentum=_BATCH_NORM_DECAY,
-     epsilon=_BATCH_NORM_EPSILON, center=True, scale=True, training=training, fused=True)
+     epsilon=_BATCH_NORM_EPSILON, center=True, scale=True, training=training, fused=True,name=name)
 
 # TODO
 # - Fixed padding
