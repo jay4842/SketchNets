@@ -6,9 +6,12 @@ _BATCH_NORM_DECAY = 0.997
 _BATCH_NORM_EPSILON = 1e-5
 
 # Batch normalization
-def batch_norm(x, name="batch_norm"):
-    return tf.contrib.layers.batch_norm(x, decay=_BATCH_NORM_DECAY, updates_collections=None, \
-           epsilon=_BATCH_NORM_EPSILON, scale=True, scope=name)
+def batch_norm(inputs, training, data_format='channels_last', name='batch_norm'):
+    """Performs a batch normalization using a standard set of parameters."""
+    # We set fused=True for a significant performance boost. See
+    # https://www.tensorflow.org/performance/performance_guide#common_fused_ops
+    return tf.layers.batch_normalization( inputs=inputs, axis=3, momentum=_BATCH_NORM_DECAY,
+     epsilon=_BATCH_NORM_EPSILON, center=True, scale=True, training=training, fused=True,name=name)
 
 # Helper to return a wavelet to use for a transform
 def get_wavefn(type_='haar'):
@@ -109,13 +112,6 @@ def conv2d(net, filters, kernel = 3, stride = 1, dilation_rate = 1, activation =
 
 # RESNET HELPERS
 # From resNet tensorflow
-# - they use tf.layers batch norm instead of tf.nn. 
-def batch_norm(inputs, training, data_format='channels_last', name='batch_norm'):
-    """Performs a batch normalization using a standard set of parameters."""
-    # We set fused=True for a significant performance boost. See
-    # https://www.tensorflow.org/performance/performance_guide#common_fused_ops
-    return tf.layers.batch_normalization( inputs=inputs, axis=3, momentum=_BATCH_NORM_DECAY,
-     epsilon=_BATCH_NORM_EPSILON, center=True, scale=True, training=training, fused=True,name=name)
 
 # TODO
 # - Fixed padding
@@ -171,12 +167,12 @@ def res_block_v1(inputs, filters, filters_out, training, projection_shortcut, st
         # now the two convolutions
         # conv_layer 1
         inputs = conv2d_fixed_padding(inputs=inputs, filters=filters, kernel_size=3, strides=strides, name='conv_2d_1')
-        inputs = batch_norm(inputs=inputs, training=training)
+        inputs = batch_norm(inputs=inputs, training=training, name='bn_1')
         inputs = tf.nn.relu(inputs)
 
         # conv_layer 2
         inputs = conv2d_fixed_padding(inputs=inputs, filters=filters, kernel_size=3, strides=1, name='conv_2d_2')
-        inputs = batch_norm(inputs=inputs, training=training)
+        inputs = batch_norm(inputs=inputs, training=training, name='bn_2')
         inputs += shortcut
         inputs = tf.nn.relu(inputs)
 

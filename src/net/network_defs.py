@@ -128,8 +128,9 @@ def AlexNet(cfgs, inputs, image_size):
 # sketch nets now
 
 # helper to get network def based on string input
+# - will add the other models as I go along
 def get_model_function(model_type):
     models = {}
-    models['base'] = ResNet_20
+    models['base'] = AlexNet
     # more later
     return models[model_type]

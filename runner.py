@@ -64,12 +64,12 @@ def run_baseline(cfgs, py = 'python'):
             for net in nets:
                 if((pool == 'avg' or pool == 'max') and (w == 'haar')):
                     cmd = '{} runner.py --model_type={} --arch=3 \
-                    --conv_layers=2 --wavelet={} --pooling={} --dataset=MNIST \
+                    --wavelet={} --pooling={} --dataset=MNIST \
                     --epochs=15 --batch_size=100'.format(py, net,w, pool)
                     os.system(cmd)
                 elif pool == 'wave':
                     cmd = '{} runner.py --model_type={} --arch=3 \
-                    --conv_layers=2 --wavelet={} --pooling={} --dataset=MNIST \
+                    --wavelet={} --pooling={} --dataset=MNIST \
                     --epochs=15 --batch_size=100'.format(py, net,w, pool)
                     os.system(cmd)
                 time.sleep(2)#'''

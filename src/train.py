@@ -58,7 +58,7 @@ def train(cfgs=None, save_dir=None):
         # - this will also tack on an infrence as well
         with tf.variable_scope('network'):
             model = net.Model(cfgs, name='Model')
-            model.define_model(model_function=defs.ResNet_20)
+            model.define_model()
         # set up the input tensors
         with tf.variable_scope('input'):
             # other images
@@ -159,15 +159,15 @@ def train(cfgs=None, save_dir=None):
                             line = '[V] Epoch [{}/{}] | [{}/{}] Test loss : {:.4f} Test accuracy : {:.4f} VAL RMSE : {:.3f}'.format(e,cfgs['train']['num_epochs']-1, idx, epoch_size, avg_test_loss, avg_test_acc, avg_test_rmse)
                             cprint('\r ' + line, 'yellow', attrs=['bold'])
                             out_file.write('{}\n'.format(line))
-                            val_accs.append(_avg_test_acc)
+                            val_accs.append(avg_test_acc)
                             val_rmses.append(avg_test_rmse)
             out_file.close() # CLOSE FILE
-    # save network after completion
-    saver = tf.train.Saver()
-    saver.save(sess, save_dir + 'epoch_{}_model.ckpt'.format(e),global_step=epoch_size) # save our model state
-    elapsed_time = time.time() - start_time
-    time_out = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
-    sess.close()
+        # save network after completion
+        saver = tf.train.Saver()
+        saver.save(sess, save_dir + 'epoch_{}_model.ckpt'.format(e),global_step=epoch_size) # save our model state
+        elapsed_time = time.time() - start_time
+        time_out = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+        sess.close()
     # get averages of training results, [not validation]
     train_acc = []
     train_rmse = []
