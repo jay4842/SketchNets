@@ -23,7 +23,7 @@ class Model:
             self.labels = tf.placeholder(tf.float32, [None, cfgs['data']['num_classes']] ,name='labels')
         # set model function based on model type in cfgs, if model_function param in define model is given a function this will
         #  not be used.
-        self.model_function = nets.get_model_function(self.cfgs['model']['model_type'])
+        self.model_function = nets.get_model_function(self.cfgs['data']['type'], self.cfgs['model']['model_type'])
     # defines self.output and layers in network
     # - you only need to change the model_function param, this will allow you to use
     #   whatever model you want.

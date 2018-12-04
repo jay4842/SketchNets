@@ -6,7 +6,7 @@ _BATCH_NORM_DECAY = 0.997
 _BATCH_NORM_EPSILON = 1e-5
 
 # Batch normalization
-def batch_norm(inputs, training, data_format='channels_last', name='batch_norm'):
+def batch_norm(inputs, training=True, data_format='channels_last', name='batch_norm'):
     """Performs a batch normalization using a standard set of parameters."""
     # We set fused=True for a significant performance boost. See
     # https://www.tensorflow.org/performance/performance_guide#common_fused_ops
@@ -31,9 +31,13 @@ def get_wavefn(type_='haar'):
 # - stride is something that will be fixed later
 #   mainly for wavelets, ex: a stride of 4 means two wavelet calls
 def pool(X, pool='max', wavelet='haar', stride=2, name='pooling'):
+    in_shape = X.get_shape().as_list()
     if(pool == 'wave'):
         wavelet = get_wavefn(wavelet)
-        return wa.dwt(X, wavelet)[0, 0, :, :, :, :]# LxLy (approx)
+        wave = wa.dwt(X, wavelet)[0, 0, :, :, :, :]# LxLy (approx)
+        wave = tf.image.resize_nearest_neighbor(wave, (in_shape[1] // stride, in_shape[2] // stride))
+        wave = tf.reshape(wave, [-1, in_shape[1] // stride, in_shape[2] // stride, in_shape[-1]]) # reinforce shape
+        return wave
     if(pool == 'avg'):
         return tf.nn.avg_pool(X, ksize=[1, 2, 2, 1], strides=[1, stride, stride, 1], \
            padding='SAME', name=name)
@@ -45,9 +49,9 @@ def pool(X, pool='max', wavelet='haar', stride=2, name='pooling'):
 # The dwt function
 # - uses wavelet library to preform the transform.
 # - I am not sure If I need to keep the batch norm after but I think we do need it.
-def dwt(x, wave_type, name='dwt'):
+def dwt(x, wave_type, training=True, name='dwt'):
     with tf.variable_scope(name):
-        x = batch_norm(x, name='bn_input')
+        x = batch_norm(x, training=training, name='bn_input')
 
         #[w_pass, h_pass, b, height, width, channel]
         in_shape = x.get_shape().as_list()
@@ -55,19 +59,19 @@ def dwt(x, wave_type, name='dwt'):
         
         ll = tf.image.resize_nearest_neighbor(x_dwt[0, 0, :, :, :, :], (in_shape[1], in_shape[2]))
         ll = tf.reshape(ll, [-1, in_shape[1], in_shape[2], in_shape[-1]])
-        ll = batch_norm(ll, name='ll_bn')
+        ll = batch_norm(ll, training=training, name='ll_bn')
 
         lh = tf.image.resize_nearest_neighbor(x_dwt[0, 1, :, :, :, :], (in_shape[1], in_shape[2]))
         lh = tf.reshape(lh, [-1, in_shape[1], in_shape[2], in_shape[-1]])
-        lh = batch_norm(lh, name='lh_bn')
+        lh = batch_norm(lh, training=training, name='lh_bn')
 
         hl = tf.image.resize_nearest_neighbor(x_dwt[1, 0, :, :, :, :], (in_shape[1], in_shape[2]))
         hl = tf.reshape(hl, [-1, in_shape[1], in_shape[2], in_shape[-1]])
-        hl = batch_norm(hl, name='hl_bn')
+        hl = batch_norm(hl, training=training, name='hl_bn')
 
         hh = tf.image.resize_nearest_neighbor(x_dwt[1, 1, :, :, :, :], (in_shape[1], in_shape[2]))
         hh = tf.reshape(hh, [-1, in_shape[1], in_shape[2], in_shape[-1]])
-        hh = batch_norm(hh, name='hh_bn')
+        hh = batch_norm(hh, training=training, name='hh_bn')
 
         return ll, lh, hl, hh
 # end of dwt

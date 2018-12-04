@@ -129,8 +129,12 @@ def AlexNet(cfgs, inputs, image_size):
 
 # helper to get network def based on string input
 # - will add the other models as I go along
-def get_model_function(model_type):
+def get_model_function(data_type, model_type):
     models = {}
-    models['base'] = AlexNet
+    if(data_type == 'MNIST'):
+        models['base'] = AlexNet
+    else:
+        models['base'] = ResNet_20
+    
     # more later
     return models[model_type]

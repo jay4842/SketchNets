@@ -65,12 +65,12 @@ def run_baseline(cfgs, py = 'python'):
                 if((pool == 'avg' or pool == 'max') and (w == 'haar')):
                     cmd = '{} runner.py --model_type={} --arch=3 \
                     --wavelet={} --pooling={} --dataset=MNIST \
-                    --epochs=15 --batch_size=100'.format(py, net,w, pool)
+                    --epochs=1 --batch_size=100'.format(py, net,w, pool)
                     os.system(cmd)
                 elif pool == 'wave':
                     cmd = '{} runner.py --model_type={} --arch=3 \
                     --wavelet={} --pooling={} --dataset=MNIST \
-                    --epochs=15 --batch_size=100'.format(py, net,w, pool)
+                    --epochs=1 --batch_size=100'.format(py, net,w, pool)
                     os.system(cmd)
                 time.sleep(2)#'''
     # runner for CIFAR
@@ -82,12 +82,12 @@ def run_baseline(cfgs, py = 'python'):
                 if((pool == 'avg' or pool == 'max') and (w == 'haar')):
                     cmd = '{} runner.py --model_type={}\
                     --wavelet={} --pooling={} --dataset=cifar-10 \
-                    --epochs=30 --batch_size=100'.format(py, net,w, pool)
+                    --epochs=1 --batch_size=100'.format(py, net,w, pool)
                     os.system(cmd)
                 elif pool == 'wave':
                     cmd = '{} runner.py --model_type={} \
                     --wavelet={} --pooling={} --dataset=cifar-10 \
-                    --epochs=30 --batch_size=100'.format(py, net,w, pool)
+                    --epochs=1 --batch_size=100'.format(py, net,w, pool)
                 os.system(cmd)
                 time.sleep(2)
 
