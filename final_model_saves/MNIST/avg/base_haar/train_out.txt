@@ -1,1 +1,0 @@
-[T] Epoch [0/14] | [2/600] TRAINING loss : 2.3022 TRAINING accuracy : 0.1000
