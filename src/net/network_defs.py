@@ -128,7 +128,6 @@ def sketch_net_1(cfgs, inputs, image_size):
     with tf.variable_scope('Sketch_Net_1'):
         wave_type = cfgs['model']['wavelet']
         data_type = cfgs['data']['type']
-        pooling = cfgs['model']['pooling']
         # return a backend based on the dataset that is currently being used
         cnn_backend = get_model_function(data_type, 'base')
         # convert mnist data to d2 image vs 1d image
@@ -147,17 +146,44 @@ def sketch_net_1(cfgs, inputs, image_size):
         return cnn_backend(cfgs, inputs, image_size, transform_done=True)
 
 # sketch net 2
-# discription
+# - first create dwt by feeding the inputs tensor to a dwt transform
+# - Feed ll to a deeper network.
+# - feed lh, hl, and hh to they're own shallow networks.
+# - return the sum of the four networks
 def sketch_net_2(cfgs, inputs, image_size):
-    print('wip')
+    with tf.variable_scope('Sketch_Net_1'):
+        wave_type = cfgs['model']['wavelet']
+        data_type = cfgs['data']['type']
+        deep_cnn = ResNet_20
+        shallow_cnn = AlexNet
+        # return a backend based on the dataset that is currently being used
+        with tf.variable_scope('process'):
+            if(data_type == 'MNIST'):
+                # we need to reshape our inputs
+                inputs = tf.reshape(inputs, [-1,28,28,1])
+                inputs = tf.image.grayscale_to_rgb(inputs)
+                inputs = tf.image.resize_nearest_neighbor(inputs, (image_size[1], image_size[0]))
+            #
+            ll, lh, hl, hh = mh.dwt(inputs, wave_type, name='dwt')
+        
+        ll = deep_cnn(cfgs, ll, image_size, transform_done=True)
+        lh = shallow_cnn(cfgs, lh, image_size, transform_done=True)
+        hl = shallow_cnn(cfgs, hl, image_size, transform_done=True)
+        hh = shallow_cnn(cfgs, hh, image_size, transform_done=True)
+
+        # now sum them
+        return tf.add_n([ll,lh,hl,hh], name='sum')
+# end of sketch_2
+
+
+
+        
+        
 # helper to get network def based on string input
 # - will add the other models as I go along
 def get_model_function(data_type, model_type):
     models = {}
-    if(data_type == 'MNIST'):
-        models['base'] = AlexNet
-    else:
-        models['base'] = ResNet_20
+    models['base'] = ResNet_20
     
     # more later
     return models[model_type]
