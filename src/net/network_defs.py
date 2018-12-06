@@ -151,7 +151,7 @@ def sketch_net_1(cfgs, inputs, image_size):
 # - feed lh, hl, and hh to they're own shallow networks.
 # - return the sum of the four networks
 def sketch_net_2(cfgs, inputs, image_size):
-    with tf.variable_scope('Sketch_Net_1'):
+    with tf.variable_scope('Sketch_Net_2'):
         wave_type = cfgs['model']['wavelet']
         data_type = cfgs['data']['type']
         deep_cnn = ResNet_20
@@ -175,6 +175,60 @@ def sketch_net_2(cfgs, inputs, image_size):
         return tf.add_n([ll,lh,hl,hh], name='sum')
 # end of sketch_2
 
+# sketch 3
+# - Perform dwt on initial image creating ll, lh, hl, hh
+# - feed ll to a deep network
+# - concat 1h, hl, hh, feed to a shallow network
+# - return the sum of the two networks
+def sketch_net_3(cfgs, inputs, image_size):
+    with tf.variable_scope('Sketch_Net_3'):
+        wave_type = cfgs['model']['wavelet']
+        data_type = cfgs['data']['type']
+        deep_cnn = ResNet_20
+        shallow_cnn = AlexNet
+        # return a backend based on the dataset that is currently being used
+        with tf.variable_scope('process'):
+            if(data_type == 'MNIST'):
+                # we need to reshape our inputs
+                inputs = tf.reshape(inputs, [-1,28,28,1])
+                inputs = tf.image.grayscale_to_rgb(inputs)
+                inputs = tf.image.resize_nearest_neighbor(inputs, (image_size[1], image_size[0]))
+            # dwt
+            ll, lh, hl, hh = mh.dwt(inputs, wave_type, name='dwt')
+        
+        deep = deep_cnn(cfgs, ll, image_size, transform_done=True)
+        shal = shallow_cnn(cfgs, tf.concat([lh,hl, hh], axis=-1), image_size, transform_done=True)
+
+        return tf.add_n([deep,shal], name='sum')
+# end of sketch net 3
+
+# sketch 4
+# - Perform dwt on initial image creating ll, lh, hl, hh
+# - perform another dwt on ll creating dwt' = [ll', lh', hl', hh']
+# - upsample dwt' to match lh, hl, and hh
+# - concat all, [ll', lh', hl', hh', lh, hl, hh] and feed to a normal cnn
+# - return normal cnn
+def sketch_net_4(cfgs, inputs, image_size):
+    with tf.variable_scope('Sketch_Net_4'):
+        wave_type = cfgs['model']['wavelet']
+        data_type = cfgs['data']['type']
+        deep_cnn = ResNet_20
+        # return a backend based on the dataset that is currently being used
+        with tf.variable_scope('process'):
+            if(data_type == 'MNIST'):
+                # we need to reshape our inputs
+                inputs = tf.reshape(inputs, [-1, 28, 28, 1])
+                inputs = tf.image.grayscale_to_rgb(inputs)
+                inputs = tf.image.resize_nearest_neighbor(inputs, (image_size[1], image_size[0]))
+            # dwt processes
+            ll_1, lh_1, hl_1, hh_1 = mh.dwt(inputs, wave_type, name='dwt_1')
+            ll_2, lh_2, hl_2, hh_2 = mh.dwt(ll_1, wave_type, name='dwt_2')
+            dwt_2 = tf.concat([ll_2, lh_2, hl_2, hh_2], axis=-1)
+            dwt_2 = tf.image.resize_nearest_neighbor(dwt_2, (image_size[1]//2, image_size[0]//2))
+            conv_in = tf.concat([dwt_2, lh_1, hl_1, hh_1], axis=-1)
+        
+        return deep_cnn(cfgs, conv_in, image_size, transform_done=True)
+    
 
 
         
