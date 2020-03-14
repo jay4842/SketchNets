@@ -1,5 +1,5 @@
 # SketchNets
-Currently working on converting code into a class based paradigm.
+Experimenting with different types of Convolutional neural network models.  
 
 ## Dependencies
 - Tensorflow (gpu recommended)
